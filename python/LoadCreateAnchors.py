@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import random
 from Rectangle import Rectangle
 
 # Create the RPN hashmap using size, scale and aspect ratios
@@ -165,7 +166,10 @@ for key in labelNames.keys():
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 height = int(gray.shape[0]*scale_percent)
                 width = int(gray.shape[1]*scale_percent)
-                dim = (width, height)        
+                dim = (width, height)
+                 
+                # resize the frame for viewing
+                rimg = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
         
                 # Create the anchors in the frame
                 colSpacing = int(width/numAnchorCols)
@@ -175,102 +179,75 @@ for key in labelNames.keys():
                 colAnchorPts = list(range(colSpacing, width, colSpacing))
                 rowAnchorPts = list(range(rowSpacing, height, rowSpacing))
                 
-                # resize the frame for viewing
-                rimg = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
+                print("Col anchors = " + str(colAnchorPts))
+                print("Row anchors = " + str(rowAnchorPts))
+                print("\n")
                 
-                # TEST: Draw the first box in the RPN map
-                # TODO Loop through all rpn boxes and calculate overlap btwn GT face
-                boxname = 'box2'
-                rpn_box = rpn_map[boxname]
-                
-                # TEST: Draw the RPN test box
-                bw = rpn_box[0]
-                bh = rpn_box[1]
-                half_w = bw/2
-                half_h = bh/2
-                
-                # loop through anchor pts and insert small circles
-                # TODO: Randomly sample the anchor pts rather than looping
-                for m in range(0, len(rowAnchorPts), 2):  # testing row stride
-                    for n in range(0, len(colAnchorPts), 2):    # testing col stride
-                        xanchor = colAnchorPts[n]
-                        yanchor = rowAnchorPts[m]
-                                
-                        circleCenter = (xanchor, yanchor)
-                        circleRadius = 3
-                        circleColor = (0,255,0)
-                        cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
+                # Create the dictionary for coords for each anchor pt
+                anchorPtsMap = {}
+                count = 0
+                for m in colAnchorPts:
+                    for n in rowAnchorPts:
+                        anchorPtsMap[str(count)] = [m, n]
+                        count = count + 1
                         
-                        # Loop through proposals and create Rectangle objects
-                        # TODO: Cr
-                        h_start = half_h + yanchor
-                        h_end = yanchor - half_h
-                        w_start = xanchor - half_w
-                        w_end = xanchor + half_w
-                        
-                        # Create the rectangle points for proposal
-                        x1 = int(w_start)
-                        y1 = int(h_start)
-                        x2 = int(w_end)
-                        y2 = int(h_end)
-                        rpn_rect = Rectangle(x1, y1, x2, y2)
-                        
-                        # Calculate intersections with face boxes
-                        for fname, fdata in face_data.items():
-                            
-                            x = fdata[0]
-                            y = fdata[1]
-                            w = fdata[2]
-                            h = fdata[3]
-                            x11 = x
-                            y11 = y
-                            x22 = x+w
-                            y22 = y+h
-                            frect = Rectangle(x11, y11, x22, y22)
-                                                        
-                            intersection = rpn_rect&frect
-                            if (intersection != None):
-                                
-                                # Draw the proposal box over anchors
-                                rpn_x1 = rpn_rect.x1
-                                rpn_y1 = rpn_rect.y1
-                                rpn_x2 = rpn_rect.x2
-                                rpn_y2 = rpn_rect.y2
-                                
-                                print("Frame position = " + str(frame_pos))
-                                print("Face name = " + str(fname))
-                                print("Box name = " + str(boxname))
-                                print("Anchor [ " + str(xanchor) + ", " + str(yanchor) + " ]")
-                                print("-----------------------------------------")
-                                print("RPN Box location = " + rpn_rect.to_string())
-                                print("Face location = " + frect.to_string())
-                                print("intersection = " + intersection.to_string())
-                                print("-----------------------------------------\n")
-                                
-                                # Only draw the rpn boxif intersection exists
-                                cv2.rectangle(rimg, (rpn_x1,rpn_y1), (rpn_x2,rpn_y2), (0,0,255), 2)
-
-        
-                cv2.imshow('Video Frame', rimg)
-        
-        #        if cv2.waitKey(1) & 0xFF == ord('q'):
-        #            break       
+                # Loop through the anchor keys
+                #anchorKeys = list(anchorPtsMap.keys())
+                print("Anchor Pts Map (len = " + str(len(anchorPtsMap)) + "):")
+                while (len(anchorPtsMap) > 0):
+                    randKey = random.choice(list(anchorPtsMap.keys()))
+                    anchorPts = anchorPtsMap[randKey]
                     
-                cv2.waitKey(1)
-                
-        input("Press Enter to continue...")
+                    # Remove the 
+                    #anchorKeys.remove(randKey)
+                    del anchorPtsMap[randKey]
+                    print("key: " + randKey + ", pts: " + str(anchorPts))
+                    xanchor = anchorPts[0]
+                    yanchor = anchorPts[1]
+                    
+                    # Draw the randomly chosen anchor pts
+                    circleCenter = (xanchor, yanchor)
+                    circleRadius = 3
+                    circleColor = (0,255,0)
+                    
+                    # TEST: Draw the first box in the RPN map
+                    # TODO Loop through all rpn boxes and calculate overlap btwn GT face
+                    boxname = 'box2'
+                    rpn_box = rpn_map[boxname]
+                    
+                    # TEST: Draw the RPN test box
+                    bw = rpn_box[0]
+                    bh = rpn_box[1]
+                    half_w = bw/2
+                    half_h = bh/2
+                    
+                    # Create the spacing from the anchor pt for the box
+                    h_start = half_h + yanchor
+                    h_end = yanchor - half_h
+                    w_start = xanchor - half_w
+                    w_end = xanchor + half_w
+                    
+                    # Create the rectangle points for proposal box
+                    rpn_x1 = int(w_start)
+                    rpn_y1 = int(h_start)
+                    rpn_x2 = int(w_end)
+                    rpn_y2 = int(h_end)
+                    rpn_rect = Rectangle(rpn_x1, rpn_y1, rpn_x2, rpn_y2)
+                    
+                    # Draw the anchor pts and rpn box
+                    cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
+                    cv2.rectangle(rimg, (rpn_rect.x1,rpn_rect.y1), (rpn_rect.x2,rpn_rect.y2), (0,0,255), 2)
+                    
+                    cv2.imshow('Video Frame', rimg)
+                        
+                    cv2.waitKey(1)
+                    
+                    input("Press Enter to continue...")   
+                                     
+                print("\n")
+                    
 
-#     else: 
-#         break;
-
-# Press 'q' to close all windows
-# & 0xFF == ord('q'):
-#     break
-        
-# Press 'q' to close all windows
-# if cv2.waitKey(1) & 0xFF == ord('q'):
-#     break          
+         
 cap.release()
-# cv2.waitKey(1) & 0xFF == ord('q')
 cv2.destroyAllWindows()
 cv2.waitKey(1)
