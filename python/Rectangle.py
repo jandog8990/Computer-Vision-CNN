@@ -60,6 +60,12 @@ class Rectangle:
                 yield rect
     __sub__ = difference
     
+    # Area of the current object
+    def area(self):
+        w = self.x2 - self.x1
+        h = self.y2 - self.y1
+        return w*h
+    
     # Show the coords as a string
     def to_string(self):
         return "[" + str(self.x1) + ", " + str(self.y1) + ", " + str(self.x2) + ", " + str(self.y2) + "]"

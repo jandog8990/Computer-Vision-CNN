@@ -114,6 +114,11 @@ for key in labelNames.keys():
         f1 = np.load(face1_data)
         f2 = np.load(face2_data)
         f3 = np.load(face3_data)
+        
+        # Scale the face data and create hashmap of faces
+        f1 = [int(coord*scale_percent) for coord in f1]
+        f2 = [int(coord*scale_percent) for coord in f2]
+        f3 = [int(coord*scale_percent) for coord in f3]
         face_data = {'face1': f1, 'face2': f2, 'face3': f3}
         
         # Calculate face areas
@@ -179,10 +184,6 @@ for key in labelNames.keys():
                 colAnchorPts = list(range(colSpacing, width, colSpacing))
                 rowAnchorPts = list(range(rowSpacing, height, rowSpacing))
                 
-                print("Col anchors = " + str(colAnchorPts))
-                print("Row anchors = " + str(rowAnchorPts))
-                print("\n")
-                
                 # Create the dictionary for coords for each anchor pt
                 anchorPtsMap = {}
                 count = 0
@@ -193,7 +194,6 @@ for key in labelNames.keys():
                         
                 # Loop through the anchor keys
                 #anchorKeys = list(anchorPtsMap.keys())
-                print("Anchor Pts Map (len = " + str(len(anchorPtsMap)) + "):")
                 while (len(anchorPtsMap) > 0):
                     randKey = random.choice(list(anchorPtsMap.keys()))
                     anchorPts = anchorPtsMap[randKey]
@@ -201,7 +201,6 @@ for key in labelNames.keys():
                     # Remove the 
                     #anchorKeys.remove(randKey)
                     del anchorPtsMap[randKey]
-                    print("key: " + randKey + ", pts: " + str(anchorPts))
                     xanchor = anchorPts[0]
                     yanchor = anchorPts[1]
                     
@@ -212,7 +211,7 @@ for key in labelNames.keys():
                     
                     # TEST: Draw the first box in the RPN map
                     # TODO Loop through all rpn boxes and calculate overlap btwn GT face
-                    boxname = 'box2'
+                    boxname = 'box1'
                     rpn_box = rpn_map[boxname]
                     
                     # TEST: Draw the RPN test box
@@ -234,17 +233,53 @@ for key in labelNames.keys():
                     rpn_y2 = int(h_end)
                     rpn_rect = Rectangle(rpn_x1, rpn_y1, rpn_x2, rpn_y2)
                     
-                    # Draw the anchor pts and rpn box
-                    cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
-                    cv2.rectangle(rimg, (rpn_rect.x1,rpn_rect.y1), (rpn_rect.x2,rpn_rect.y2), (0,0,255), 2)
-                    
-                    cv2.imshow('Video Frame', rimg)
+                    # Calculate intersections with face boxes
+                    for fname, fdata in face_data.items():
                         
-                    cv2.waitKey(1)
+                        x = fdata[0]
+                        y = fdata[1]
+                        w = fdata[2]
+                        h = fdata[3]
+                        x11 = x
+                        y11 = y
+                        x22 = x+w
+                        y22 = y+h
+                        frect = Rectangle(x11, y11, x22, y22)
+                                                    
+                        intersection = rpn_rect&frect
+                        if (intersection != None):
+                            # Area of intersection
+                            intersection_area = intersection.area()
+                            
+                            # Draw the proposal box over anchors
+                            rpn_x1 = rpn_rect.x1
+                            rpn_y1 = rpn_rect.y1
+                            rpn_x2 = rpn_rect.x2
+                            rpn_y2 = rpn_rect.y2
+                                    
+                            print("Frame position = " + str(frame_pos))
+                            print("Face name = " + str(fname))
+                            print("Box name = " + str(boxname))
+                            print("Anchor [ " + str(xanchor) + ", " + str(yanchor) + " ]")
+                            
+                            print("-----------------------------------------")
+                            print("RPN Box location = " + rpn_rect.to_string())
+                            print("Face location = " + frect.to_string())
+                            print("Intersection = " + intersection.to_string())
+                            print("Intersection area = " + str(intersection_area))
+                            print("-----------------------------------------\n")
                     
-                    input("Press Enter to continue...")   
+                            # Draw the anchor pts and rpn box
+                            cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
+                            cv2.rectangle(rimg, (rpn_rect.x1,rpn_rect.y1), (rpn_rect.x2,rpn_rect.y2), (0,0,255), 2)
+                            
+            cv2.imshow('Video Frame', rimg)
+                
+            cv2.waitKey(1)
+                            
+        input("Press Enter to continue...")   
                                      
-                print("\n")
+        print("\n")
                     
 
          
