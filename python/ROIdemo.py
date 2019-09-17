@@ -72,7 +72,7 @@ for i in range(len(videoNames)):
     #print('r2 = ', r2)
     print('ROIs =', ROIs)
     
-    # Face ROIs	
+    # Face ROIs	(X, Y, W, H)
     r1 = ROIs[0];
     r2 = ROIs[1];
     r3 = ROIs[2];
@@ -135,7 +135,8 @@ for i in range(len(videoNames)):
             imCrop2 = gray.copy()[int(r2[1]):int(r2[1]+r2[3]), int(r2[0]):int(r2[0]+r2[2])]
             imCrop3 = gray.copy()[int(r3[1]):int(r3[1]+r3[3]), int(r3[0]):int(r3[0]+r3[2])]
 
-            # Draw rectangle around current face frame
+            # Draw rectangle around current face frame ROI = (X, Y, W, H) and
+            # rectangle takes 5 args (img, start point (top left), end point (top right to bottom), color, thickness)
             cv2.rectangle(gray, (int(r1[0]), int(r1[1])), (int(r1[0]+r1[2]), int(r1[1]+r1[3])), (0,0,255), 3)
             cv2.rectangle(gray, (int(r2[0]), int(r2[1])), (int(r2[0]+r2[2]), int(r2[1]+r2[3])), (0,0,255), 3)
             cv2.rectangle(gray, (int(r3[0]), int(r3[1])), (int(r3[0]+r3[2]), int(r3[1]+r3[3])), (0,0,255), 3)
