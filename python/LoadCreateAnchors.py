@@ -3,6 +3,28 @@ import cv2
 import random
 from Rectangle import Rectangle
 
+# Create the anchor pts hashmap to store all anchors for a frame
+def create_anchor_map(colAnchorPts, rowAnchorPts):
+    anchorPtsMap = {}
+    count = 0
+    for m in colAnchorPts:
+        for n in rowAnchorPts:
+            anchorPtsMap[str(count)] = [m, n]
+            count = count + 1
+            
+    return anchorPtsMap
+
+# Clean the background map by removing replicate keys
+# params:
+#   faceMap - face dict
+#   backMap - backgorund dict
+def clean_back_map(faceMap, backMap):
+    for fname, fdata in faceMap.items():
+        for fkey in fdata.keys():
+            del backMap[fkey]
+            
+    return backMap
+
 # Create the RPN hashmap using size, scale and aspect ratios
 # params:
 #   size - rpn default size
@@ -120,6 +142,7 @@ for key in labelNames.keys():
         f2 = [int(coord*scale_percent) for coord in f2]
         f3 = [int(coord*scale_percent) for coord in f3]
         face_data = {'face1': f1, 'face2': f2, 'face3': f3}
+        NUM_FACES = int(len(face_data))
         
         # Calculate face areas
         [w1, h1] = calculate_wh(f1, scale_percent)
@@ -157,6 +180,8 @@ for key in labelNames.keys():
 
         # Loop through the video and pull out every 10th frame
         # while(cap.isOpened()):
+        FaceBoxes = []
+        BackBoxes = []
         for i in range(0, frame_count, step):
         
             # read the current frame
@@ -184,16 +209,20 @@ for key in labelNames.keys():
                 colAnchorPts = list(range(colSpacing, width, colSpacing))
                 rowAnchorPts = list(range(rowSpacing, height, rowSpacing))
                 
-                # Create the dictionary for coords for each anchor pt
-                anchorPtsMap = {}
-                count = 0
-                for m in colAnchorPts:
-                    for n in rowAnchorPts:
-                        anchorPtsMap[str(count)] = [m, n]
-                        count = count + 1
+                # Create the Anchor pts hashmap for coords for each anchor pt
+                anchorPtsMap = create_anchor_map(colAnchorPts, rowAnchorPts)
                         
                 # Loop through the anchor keys
                 #anchorKeys = list(anchorPtsMap.keys())
+                # initialize face hashmap
+                #faceMap = dict.fromkeys(face_data.keys(), {})
+                faceMap = {}
+                for fkey in face_data.keys():
+                    faceMap[fkey] = {}
+                backMap = {}
+                print("Face Map:")
+                print(str(faceMap))
+                print("\n")
                 while (len(anchorPtsMap) > 0):
                     randKey = random.choice(list(anchorPtsMap.keys()))
                     anchorPts = anchorPtsMap[randKey]
@@ -234,6 +263,7 @@ for key in labelNames.keys():
                     rpn_rect = Rectangle(rpn_x1, rpn_y1, rpn_x2, rpn_y2)
                     
                     # Calculate intersections with face boxes
+                    rpnMap = {}
                     for fname, fdata in face_data.items():
                         
                         x = fdata[0]
@@ -251,6 +281,13 @@ for key in labelNames.keys():
                             # Area of intersection
                             intersection_area = intersection.area()
                             
+                            # Add intersection and box data to the face map
+                            #faceMap[fname][randKey] = {
+                            #        'rpn_box': rpn_rect,
+                            #        'intersect_area': intersection_area,
+                            #        'anchor_pt': (xanchor, yanchor)
+                            #    }
+                            
                             # Draw the proposal box over anchors
                             rpn_x1 = rpn_rect.x1
                             rpn_y1 = rpn_rect.y1
@@ -258,6 +295,7 @@ for key in labelNames.keys():
                             rpn_y2 = rpn_rect.y2
                                     
                             print("Frame position = " + str(frame_pos))
+                            print("Anchor key = " + str(randKey))
                             print("Face name = " + str(fname))
                             print("Box name = " + str(boxname))
                             print("Anchor [ " + str(xanchor) + ", " + str(yanchor) + " ]")
@@ -268,18 +306,57 @@ for key in labelNames.keys():
                             print("Intersection = " + intersection.to_string())
                             print("Intersection area = " + str(intersection_area))
                             print("-----------------------------------------\n")
+                            
+                            # Append to the face hashmap
+                            rpnMap['rpn_box'] = rpn_rect
+                            rpnMap['anchor_pt'] = (xanchor, yanchor)
+                            rpnMap['intersect_area'] = intersection_area
+
+                            print("Rpn Map:")
+                            print(str(rpnMap))
+                            print("\n")
+                            
+                            print("OG Face Map ( " + fname + " ):")
+                            print(str(faceMap[fname]))
+                            print("\n")
+                            
+                            faceMap[fname][randKey] = rpnMap
+                            
+                            print("New Face Map ( " + fname + " ):")
+                            print(str(faceMap[fname]))
+                            print("\n")
                     
                             # Draw the anchor pts and rpn box
                             cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
                             cv2.rectangle(rimg, (rpn_rect.x1,rpn_rect.y1), (rpn_rect.x2,rpn_rect.y2), (0,0,255), 2)
-                            
-            cv2.imshow('Video Frame', rimg)
+                        else:
+                            # Append the non-intersecting box to the backMap
+                            if (randKey != None):
+                                backMap[randKey] = {
+                                        'rpn_box': rpn_rect,
+                                        'anchor_pt': (xanchor, yanchor)
+                                    }
                 
-            cv2.waitKey(1)
-                            
-        input("Press Enter to continue...")   
-                                     
-        print("\n")
+                # Check the face hashmap and background hashmaps and remove elems
+                print("Face Map:")
+                print(str(faceMap))
+                print("\n")
+                
+                # Clean the back map
+                backMap = clean_back_map(faceMap, backMap)
+                
+                print("Background Map:")
+                print(str(backMap))
+                print("\n")
+                
+                
+                cv2.imshow('Video Frame', rimg)
+                    
+                cv2.waitKey(1)
+                                
+                input("Press Enter to continue...")   
+                                         
+                print("\n")
                     
 
          
