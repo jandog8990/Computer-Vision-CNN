@@ -22,19 +22,35 @@ def create_anchor_map(colAnchorPts, rowAnchorPts):
 def clean_back_map(faceMap, backMap):
     for fname, fdata in faceMap.items():
         for fkey in fdata.keys():
-            del backMap[fkey]
+            if key in backMap:
+                del backMap[fkey]   
             
     return backMap
+
+# Extract pixels given Rectangle object for face/bg
+# params:
+#   rectList - list of Rectangle objects
+#   img - Image frame to sample from
+def extract_pixels(rectList, img, name):
+
+    # loop through rectangles and order the corrds and create cropped image
+    pixelList = []
+    count = 0
+    for rect in rectList:
+        oc = rect.order_coords()    # get the ordered coordinates for cropping
+        crop = img[oc[0]:oc[1], oc[2]:oc[3]]
+        fname = "object_" + name + "_" + str(count) + ".jpg"
+        count = count + 1
+        cv2.imwrite(fname, crop)
+        pixelList.append(crop.flatten())
+        
+    return pixelList
 
 # Find the max area for intersection face boxes
 # params:
 #   faceMap - face dict
 def find_max_face(faceMap):
     rpnMap = {}
-    print("\n")
-    print("Face Map:")
-    print(str(faceMap))
-    print("\n")
     
     for fkey,fdata in faceMap.items():
         
@@ -65,8 +81,9 @@ def find_max_face(faceMap):
                     del rpnMap[rkey]
             count= count +1
         
-        # update the faceMap to include the max values for the rpnMaps
-        faceMap[fkey] = rpnMap
+        # update the faceMap to include RPN box for the max area
+        key = list(rpnMap.keys())[0]
+        faceMap[fkey] = rpnMap[key]['rpn_box']
         
     return faceMap
         
@@ -131,6 +148,7 @@ def calculate_wh(roi, scale):
 rootdir = '../../Output/'
 videoPath = rootdir + 'videos/';
 dataPath = rootdir + 'data/';
+croppedPath = rootdir + 'croppedRPN/';
 
 # Prefixes for faces and bg
 faces = ['Face_1_', 'Face_2_', 'Face_3_']
@@ -156,7 +174,7 @@ numAnchorCols = 10
 numAnchorRows = 5
 
 # Frame configuration for resizing and visualizing
-step = 20
+step = 30
 scale_percent = 50/100
 
 # Video names from the ROIDemo file
@@ -170,8 +188,12 @@ labelNames['back'] = ['Eating_Back', 'Pointing_Back', 'Talking_Back', 'Typing_Ba
 labelNames['side'] = ['Eating_Side', 'Pointing_Side', 'Talking_Side', 'Typing_Side', 'Writing_Side']
 
 print("Data and Videos:")
-FaceBoxes = {}
-BackBoxes = {}
+FaceBoxes = []
+BackBoxes = []
+FrameGroup = []
+frameCtr = 0
+#FaceBoxes = {}
+#BackBoxes = {}
 for key in labelNames.keys():
     print("key = " + key)
     labels = labelNames[key]
@@ -180,8 +202,8 @@ for key in labelNames.keys():
     for i in range(len(labels)):
         # Initialize the face and background boxes as dicts
         vidName = labels[i]
-        FaceBoxes[vidName] = {}
-        BackBoxes[vidName] = {}
+        #FaceBoxes[vidName] = {}
+        #BackBoxes[vidName] = {}
         
         # Create the npy data file names
         face1_data = dataPath + faces[0] + vidName + npy
@@ -226,7 +248,7 @@ for key in labelNames.keys():
         print("F3: " + str(f3))
         print("\n")
         
-        print("Face Width Heigh Scale:")
+        print("Face Width Height Scale:")
         print("Face 1 = " + str(w1) + " : " + str(h1))
         print("Face 2 = " + str(w2) + " : " + str(h2))
         print("Face 3 = " + str(w3) + " : " + str(h3))
@@ -251,7 +273,6 @@ for key in labelNames.keys():
         print("\n")
 
         # Loop through the video and pull out every 10th frame
-        # while(cap.isOpened()):
         for i in range(0, frame_count, step):
             # set the frame number
             frameNum = i
@@ -272,6 +293,8 @@ for key in labelNames.keys():
                  
                 # resize the frame for viewing
                 rimg = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
+                print("Resized Image dims = " + str(rimg.shape))
+                print("\n")
         
                 # Create the anchors in the frame
                 colSpacing = int(width/numAnchorCols)
@@ -284,20 +307,19 @@ for key in labelNames.keys():
                 # Create the Anchor pts hashmap for coords for each anchor pt
                 anchorPtsMap = create_anchor_map(colAnchorPts, rowAnchorPts)
                         
-                # Loop through the anchor keys
-                #anchorKeys = list(anchorPtsMap.keys())
-                # initialize face hashmap
-                #faceMap = dict.fromkeys(face_data.keys(), {})
+                # Initialize the Face and BG hashmaps
                 faceMap = {}
                 for fkey in face_data.keys():
                     faceMap[fkey] = {}
                 backMap = {}
+                
+                # Loop through the anchors map while points exist
                 while (len(anchorPtsMap) > 0):
+                    # Randomly select an anchor pt in the map
                     randKey = random.choice(list(anchorPtsMap.keys()))
                     anchorPts = anchorPtsMap[randKey]
                     
-                    # Remove the 
-                    #anchorKeys.remove(randKey)
+                    # Remove the anchor point that was just chosen
                     del anchorPtsMap[randKey]
                     xanchor = anchorPts[0]
                     yanchor = anchorPts[1]
@@ -312,7 +334,8 @@ for key in labelNames.keys():
                     boxname = 'box1'
                     rpn_box = rpn_map[boxname]
                     
-                    # TEST: Draw the RPN test box
+                    # TEST: Draw the RPN test box 
+                    # TODO: This will be chosen from the scale/ratio list
                     bw = rpn_box[0]
                     bh = rpn_box[1]
                     half_w = bw/2
@@ -331,7 +354,7 @@ for key in labelNames.keys():
                     rpn_y2 = int(h_end)
                     rpn_rect = Rectangle(rpn_x1, rpn_y1, rpn_x2, rpn_y2)
                     
-                    # Calculate intersections with face boxes
+                    # Loop through faces & calculate intersections with face boxes
                     rpnMap = {}
                     for fname, fdata in face_data.items():
                         
@@ -362,67 +385,69 @@ for key in labelNames.keys():
                             rpn_y1 = rpn_rect.y1
                             rpn_x2 = rpn_rect.x2
                             rpn_y2 = rpn_rect.y2
-                                    
-                            print("Frame position = " + str(frame_pos))
-                            print("Anchor key = " + str(randKey))
-                            print("Face name = " + str(fname))
-                            print("Box name = " + str(boxname))
-                            print("Anchor [ " + str(xanchor) + ", " + str(yanchor) + " ]")
                             
-                            print("-----------------------------------------")
-                            print("RPN Box location = " + rpn_rect.to_string())
-                            print("Face location = " + frect.to_string())
-                            print("Intersection = " + intersection.to_string())
-                            print("Intersection area = " + str(intersection_area))
-                            print("-----------------------------------------\n")
+#                            print("-----------------------------------------")
+#                            print("Intersection EXISTS:")
+#                            print("Frame position = " + str(frame_pos))
+#                            print("Anchor key = " + str(randKey))
+#                            print("Face name = " + str(fname))
+#                            print("Box name = " + str(boxname))
+#                            print("Anchor [ " + str(xanchor) + ", " + str(yanchor) + " ]")
+#                            print("-----------------------------------------")
+#                            print("RPN Box location = " + rpn_rect.to_string())
+#                            print("Face location = " + frect.to_string())
+#                            print("Intersection = " + intersection.to_string())
+#                            print("Intersection area = " + str(intersection_area))
+#                            print("-----------------------------------------\n")
                             
-                            # Append to the face hashmap
+                            # Create the RPN hashmap with box pts and intersection areas
                             rpnMap['rpn_box'] = rpn_rect
                             rpnMap['anchor_pt'] = (xanchor, yanchor)
                             rpnMap['intersect_area'] = intersection_area
                             
-                            faceMap[fname][randKey] = rpnMap
+                            # Append the RPN hashmap to the Face hashmap
+                            faceMap[fname][randKey] = rpnMap  
                     
-                            # Draw the anchor pts and rpn box
+                            # Draw the anchor pts and RPN box on the current frame
                             cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
-                            cv2.rectangle(rimg, (rpn_rect.x1,rpn_rect.y1), (rpn_rect.x2,rpn_rect.y2), (0,0,255), 2)
+                            cv2.rectangle(rimg, (rpn_rect.x1, rpn_rect.y1), (rpn_rect.x2, rpn_rect.y2), (0,0,255), 2)
                         else:
                             # Append the non-intersecting box to the backMap
                             if (randKey != None):
-                                backMap[randKey] = {
-                                        'rpn_box': rpn_rect,
-                                        'anchor_pt': (xanchor, yanchor)
-                                    }
+                                backMap[randKey] = rpn_rect
                 
-                # Find the face box with the max area
-                faceMap = find_max_face(faceMap)
-                
-                # Clean the back map
+                # Clean the background hash map and select random background box
                 backMap = clean_back_map(faceMap, backMap)
                 backMap = sample_back_map(backMap, NUM_OBJECT_BOXES)
                 
+                # Outside Anchor Loop: Find the face box with the max area
+                faceMap = find_max_face(faceMap)
+                
+                # Convert hashmap values to list of rectangles
+                faceList = list(faceMap.values())
+                backList = list(backMap.values())
+                
+                # Extract pixels from faces and backgrounds for current frame
+                facePixelsList = extract_pixels(faceList, rimg, 'face')
+                backPixelsList = extract_pixels(backList, rimg, 'back')
+                FaceBoxes.append(facePixelsList)
+                BackBoxes.append(backPixelsList)
+                FrameGroup.append(frameCtr)
+                frameCtr = frameCtr + 1
+                
+                # Append face pixels and back pixels to FaceBox and BackBox lists
+                
+                
                 # Set the FaceBox and BackBox hashmaps for the current vid/frame
-                FaceBoxes[vidName][frameNum] = faceMap
-                BackBoxes[vidName][frameNum] = backMap
-                
-                # Face hashmap
-                print("Face Map (size = " + str(len(faceMap)) + "):")
-                print(str(faceMap))
-                print("\n")
-                
-                # Background hashmap
-                print("Background Map (size = " + str(len(backMap)) + "):")
-                print(str(backMap))
-                print("\n")
+                #FaceBoxes[vidName][frameNum] = faceMap
+                #BackBoxes[vidName][frameNum] = backMap
                 
                 # Face Box X and Y lengths
-                print("FaceBoxes Row len = " + str(len(FaceBoxes)))
-                print("FaceBoxes Col len = " + str(len(FaceBoxes[vidName])))
-                print("\n")
-                
+#                print("FaceBoxes Row len = " + str(len(FaceBoxes)))
+#                print("FaceBoxes Col len = " + str(len(FaceBoxes[vidName])))
+#                print("\n")
                 
                 cv2.imshow('Video Frame', rimg)
-                    
                 cv2.waitKey(1)
                                 
                 input("Press Enter to continue...")   

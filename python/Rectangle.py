@@ -9,6 +9,8 @@ import itertools
 
 class Rectangle:
     
+    # Rectangle object with top left and bottom right coords
+    # with each coords represented by (x1,y1) and (x2,y2)
     def __init__(self, x1, y1, x2, y2):
         self.x1 = x1
         self.y1 = y1
@@ -65,6 +67,14 @@ class Rectangle:
         w = self.x2 - self.x1
         h = self.y2 - self.y1
         return w*h
+    
+    # Order coordinates min to max for Y and X resp.
+    def order_coords(self):
+        xs = min(self.x1, self.x2)
+        xe = max(self.x1, self.x2)
+        ys = min(self.y1, self.y2)
+        ye = max(self.y1, self.y2)
+        return [ys, ye, xs, xe]
     
     # Show the coords as a string
     def to_string(self):
