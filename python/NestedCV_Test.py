@@ -14,7 +14,7 @@ from sklearn.pipeline import Pipeline
 #from BoxClassifier import BoxClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
-
+from NestedCV import NestedCV
 from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import StratifiedKFold#, GroupKFold
 
@@ -53,8 +53,8 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, Y, test_size=0.3, random_state=30, stratify=Y)
 
 # GridSearch for finding the best params for modeling
-grid = GridSearchCV(pipeline, param_grid=params, cv=5) #return_train_score=True)
-grid.fit(X_train, y_train)
+#grid = GridSearchCV(pipeline, param_grid=params, n_jobs=2, pre_dispatch='2*n_jobs', cv=5) 
+#grid.fit(X_train, y_train)
 
-#scores = nested_cv(X, y, groups, inner_cv, outer_cv, BoxClassifier, parameter_grid)
+scores = nested_cv(X_train, y, groups, inner_cv, outer_cv, BoxClassifier, parameter_grid)
 #print("Cross-validation scores: {}".format(scores))
