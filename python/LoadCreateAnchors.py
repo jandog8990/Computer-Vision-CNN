@@ -280,7 +280,6 @@ for key in labelNames.keys():
             # read the current frame
             cap.set(cv2.CAP_PROP_POS_FRAMES, i) 
             frame_pos = cap.get(cv2.CAP_PROP_POS_FRAMES)
-        
             ret, frame = cap.read()    
         
             if ret == True:
@@ -293,8 +292,6 @@ for key in labelNames.keys():
                  
                 # resize the frame for viewing
                 rimg = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
-                print("Resized Image dims = " + str(rimg.shape))
-                print("\n")
         
                 # Create the anchors in the frame
                 colSpacing = int(width/numAnchorCols)
@@ -409,8 +406,8 @@ for key in labelNames.keys():
                             faceMap[fname][randKey] = rpnMap  
                     
                             # Draw the anchor pts and RPN box on the current frame
-                            cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
-                            cv2.rectangle(rimg, (rpn_rect.x1, rpn_rect.y1), (rpn_rect.x2, rpn_rect.y2), (0,0,255), 2)
+                            #cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
+                            #cv2.rectangle(rimg, (rpn_rect.x1, rpn_rect.y1), (rpn_rect.x2, rpn_rect.y2), (0,0,255), 2)
                         else:
                             # Append the non-intersecting box to the backMap
                             if (randKey != None):
@@ -430,32 +427,31 @@ for key in labelNames.keys():
                 # Extract pixels from faces and backgrounds for current frame
                 facePixelsList = extract_pixels(faceList, rimg, 'face')
                 backPixelsList = extract_pixels(backList, rimg, 'back')
-                FaceBoxes.append(facePixelsList)
-                BackBoxes.append(backPixelsList)
+                
+                # Append pixels for faces and bg to the boxes lists
+                FaceBoxes.extend(facePixelsList)
+                BackBoxes.extend(backPixelsList)
                 FrameGroup.append(frameCtr)
                 frameCtr = frameCtr + 1
-                
-                # Append face pixels and back pixels to FaceBox and BackBox lists
-                
                 
                 # Set the FaceBox and BackBox hashmaps for the current vid/frame
                 #FaceBoxes[vidName][frameNum] = faceMap
                 #BackBoxes[vidName][frameNum] = backMap
                 
-                # Face Box X and Y lengths
-#                print("FaceBoxes Row len = " + str(len(FaceBoxes)))
-#                print("FaceBoxes Col len = " + str(len(FaceBoxes[vidName])))
-#                print("\n")
-                
-                cv2.imshow('Video Frame', rimg)
-                cv2.waitKey(1)
+                # Show the current frame with RPN boxes and training boxes
+                #cv2.imshow('Video Frame', rimg)
+                #cv2.waitKey(1)
                                 
-                input("Press Enter to continue...")   
-                                         
-                print("\n")
-                    
-
-         
+                #input("Press Enter to continue...")
+                #print("\n")
+                                                             
+# Release the video processors for CV
 cap.release()
 cv2.destroyAllWindows()
 cv2.waitKey(1)
+
+# Save the face boxes and bg boxes to Numpy files for GridSearchCV use
+fout = 'FaceBoxes.npy'
+bout = 'BackBoxes.npy'
+np.save(fout, FaceBoxes)
+np.save(bout, BackBoxes)

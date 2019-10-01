@@ -1,107 +1,60 @@
-# Class for implementing your classifier for SciKit Learn.
-# Initial code taken from:
-#   http://danielhnyk.cz/creating-your-own-estimator-scikit-learn/
-from sklearn.base import BaseEstimator, ClassifierMixin
+'''
+You need to carefully initialize X and y as described previously.
+Furthermore, inner_cv and outer_cv must be initialized using GroupKFold.
+In the parameter_grid, you will need to pass SVM parameters and the
+number of PCA components.
+'''
 
-class BoxClassifier(BaseEstimator, ClassifierMixin):
-    """An example of classifier"""
+import numpy as np
+import pandas as pd
+from sklearn.svm import SVC   # Support Vector Classifier
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler   # subtracts mean from each feature and scales to unit var
+from sklearn.pipeline import Pipeline
+#from BoxClassifier import BoxClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 
-    # Initialize by passing the parameters of your model:
-    def __init__(self, NumOfPCAcomponents, C, gamma):
-        """
-        Called when initializing the classifier.
-        """
-        self.C_ = C
-        self.gamma_ = gamma
-        self.NumOfPCAcomponents_ = NumOfPCAcomponents
+from sklearn.model_selection import ParameterGrid
+from sklearn.model_selection import StratifiedKFold#, GroupKFold
 
-    # Please add PCA and SVM in this template.
-    # Make sure to use the given parameters.
-    def fit(self, X, y):
-        """
-        This should fit classifier. All the "work" should be done here.
-        """
-        ... call .fit() for PCA and .fit for SVC()
-        return self
+## Pipeline: Scale, PCA or SVD, then the estimator (i.e. SVM or RandomTree)
+#('scaler': StandardScaler())
+#('pca', PCA())
+steps = [('scaler', StandardScaler()), ('pca', PCA()), ('SVM', SVC())]
+pipeline = Pipeline(steps)  # can use make_pipeline instead
 
-    def predict(self, X):
-        """
-        Predicts the classification of a single box of pixels.
-        """
-        ... apply PCA and .predict() for SVC()
-        ... Deterimine Class_result for SVC.
-        return(Class_result)
+# K-fold Nested CV
+#     inner_cv = KFold(n_splits=4, shuffle=True, random_state=0)
+#     outer_cv = KFold(n_splits=4, shuffle=True, random_state=0)
 
-    def score(self, X, y):
-        """
-         Returns the classification accuracy assuming
-         balanced datasets (half in each category).
-        """
-        ... Applies predition on X, and compares the results
-        ... against the actual values in y.
-        return(accuracy)
+# Stratified K-fold Nested CV
+inner_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
 
-def nested_cv(X, y, groups, inner_cv, outer_cv, Classifier, parameter_grid):
-    """
-    Uses nested cross-validation to optimize and exhaustively evaluate
-    the performance of a given classifier. The original code was taken from
-    Chapter 5 of Introduction to Machine Learning with Python. However, it
-    has been modified.
+# GridSearch params: PCA and SVM optimized with gamma and C params
+#    'SVM__C': [0.001, 0.1, 10, 100, 10e5],
+#    'SVM__gamma': [0.1, 0.01]
+n_components = 150  # image n_components reduction
+params = {
+    'pca__n_components': [n_components],
+    'SVM__C': [0.001, 0.01, 0.1, 1, 10, 100],
+    'SVM__gamma': [0.001, 0.01, 0.1, 1, 10, 100]
+}
+parameter_grid = ParameterGrid(params)
 
-    Input parameters:
-       X, y, groups: describe one set of boxes grouped by image number.
+# ================================================
+# First Implementation: Single Dimension CV
+# ================================================
 
-    Output:
-       The function returns the scores from the outer loop.
-    """
-    outer_scores = []
-    # for each split of the data in the outer cross-validation
-    # (split method returns indices of training and test parts)
-    #
-    for training_samples, test_samples in outer_cv.split(X, y, groups):
-        # find best parameter using inner cross-validation
-        best_parms = {}
-        best_score = -np.inf
-        # iterate over parameters
-        for parameters in parameter_grid:
-            # accumulate score over inner splits
-            cv_scores = []
-            # iterate over inner cross-validation
-            for inner_train, inner_test in inner_cv.split(
-                   X[training_samples], y[training_samples],
-                   groups[training_samples]):
-                   # build classifier given parameters and training data
-                   clf = Classifier(**parameters)
-                   clf.fit(X[inner_train], y[inner_train])
+# Divide the dataset into training and testset with random state and stratified K-fold
+# Random state seed gives us reproducable random number (repeats training)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, Y, test_size=0.3, random_state=30, stratify=Y)
 
-                   # evaluate on inner test set
-                   score = clf.score(X[inner_test], y[inner_test])
-                   cv_scores.append(score)
+# GridSearch for finding the best params for modeling
+grid = GridSearchCV(pipeline, param_grid=params, cv=5) #return_train_score=True)
+grid.fit(X_train, y_train)
 
-            # compute mean score over inner folds
-            # for a single combination of parameters.
-            mean_score = np.mean(cv_scores)
-            if mean_score > best_score:
-                # if better than so far, remember parameters
-                best_score = mean_score
-                best_params = parameters
-
-        # Build classifier on best parameters using outer training set
-        # This is done over all parameters evaluated through a single
-        # outer fold and all inner folds.
-        clf = Classifier(**best_params)
-        clf.fit(X[training_samples], y[training_samples])
-
-        # evaluate
-        outer_scores.append(clf.score(X[test_samples], y[test_samples]))
-    return np.array(outer_scores)
-
-
-from sklearn.model_selection import ParameterGrid, GroupKFold
-# You need to carefully initialize X and y as described previously.
-# Furthermore, inner_cv and outer_cv must be initialized using GroupKFold.
-# In the parameter_grid, you will need to pass SVM parameters and the
-# number of PCA components.
-parameter_grid = ParameterGrid(DictionaryOfValues)
-scores = nested_cv(X, y, groups, inner_cv, outer_cv, Classifier, parameter_grid)
-print("Cross-validation scores: {}".format(scores))
+#scores = nested_cv(X, y, groups, inner_cv, outer_cv, BoxClassifier, parameter_grid)
+#print("Cross-validation scores: {}".format(scores))
