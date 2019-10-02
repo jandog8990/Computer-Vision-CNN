@@ -54,21 +54,28 @@ from sklearn.model_selection import StratifiedKFold, GroupKFold
 #   outer_cv = KFold(n_splits=5, shuffle=True, random_state=0)
 
 # Stratified K-fold Nested CV with repeatable tests (i.e. SEED=0)
-#   inner_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-#   outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+inner_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
 
 # Group K-Fold CV
-inner_cv = GroupKFold(n_splits=5)
-outer_cv = GroupKFold(n_splits=5)
+#inner_cv = GroupKFold(n_splits=5)
+#outer_cv = GroupKFold(n_splits=5)
 
 # Final PCA and SVM parameters for optimized model
 # PCA and SVM optimized with gamma and C params
 n_components = 150  # image n_components reduction
 params = {
-    'pca__n_components': n_components,
-    'SVM__C': 1e3,
-    'SVM__gamma': 0.0001
+    'pca__n_components': [n_components],
+    'SVM__C': [1e3, 5e3, 1e4, 5e4, 1e5],
+    'SVM__gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1]
 }
+parameter_grid = ParameterGrid(params)
+
+#params = {
+#    'pca__n_components': n_components,
+#    'SVM__C': 1e3,
+#    'SVM__gamma': 0.0001
+#}
 #parameter_grid = ParameterGrid(params)
 
 # Split the data into 80/20 training and test
@@ -84,9 +91,21 @@ pipeline = Pipeline(steps)  # can use make_pipeline instead
 #pca = PCA(n_components=params['pca__n_components'])
 #pipeline.set_params(pca__n_components=params['pca__n_components']).fit(X_train, y_train) #pca__n_components=params['pca__n_components'])
 
-# Initialize the BoxClassifier with pipeline and parameter grid
-boxClassifier = BoxClassifier(pipeline, **params)
-boxClassifier.fit(X_train, y_train)
-y_pred = boxClassifier.predict(X_test)
-acc_test = boxClassifier.score(X_test, y_test)
-acc_train = boxClassifier.score(X_train, y_train)
+# ====================================
+# Final Classifier on 80/20 Split
+# ====================================
+
+# Inner cross-validation
+nestedCV = NestedCV()
+final_score, params, clf = nestedCV.inner_cv(X_train, y_train, X_test, y_test,
+                                        inner_cv, outer_cv, BoxClassifier, pipeline, parameter_grid)
+
+# Calculate prediction and test/train accuracy to confirm model params
+y_pred = clf.predict(X_test)
+acc_test = clf.score(X_test, y_test)
+acc_train = clf.score(X_train, y_train)
+
+
+# TEST: Initialize single BoxClassifier instance with pipeline and parameter grid
+#boxClassifier = BoxClassifier(pipeline, **params)
+#boxClassifier.fit(X_train, y_train)

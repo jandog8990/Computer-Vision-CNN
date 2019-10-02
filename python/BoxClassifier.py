@@ -48,10 +48,10 @@ class BoxClassifier(BaseEstimator, ClassifierMixin):
         ... call .fit() for PCA and .fit for SVC()
         """
         #self.svm.fit(X, y)
-        print("PCA n_components = " + str(self.pca__n_components))
-        print("SVM C = " + str(self.SVM__C))
-        print("SVM gamma = " + str(self.SVM__gamma))
-        print("\n")
+#        print("PCA n_components = " + str(self.pca__n_components))
+#        print("SVM C = " + str(self.SVM__C))
+#        print("SVM gamma = " + str(self.SVM__gamma))
+#        print("\n")
         self.pipeline.set_params(pca__n_components=self.pca__n_components,
                                  pca__svd_solver='randomized', pca__whiten=True,
                                  SVM__C=self.SVM__C, SVM__gamma=self.SVM__gamma).fit(X,y)

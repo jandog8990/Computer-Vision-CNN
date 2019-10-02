@@ -40,7 +40,7 @@ class NestedCV:
             y_outer_test = y[test_samples]
             
             # find best parameter using inner cross-validation
-            best_parms = {}
+            best_params = {}
             best_score = -np.inf
             # iterate over parameters
             for parameters in parameter_grid:
@@ -132,7 +132,6 @@ class NestedCV:
                 outer_scores.append()
                 
             outerCount = outerCount + 1
-            
             print("outer score = " + str(score))
             print("\n")
             
@@ -141,3 +140,75 @@ class NestedCV:
         print("\n")
                 
         return np.array(outer_scores)
+    
+    # inner cross validation to get the final parameters and classifier
+    def inner_cv(self, X, y, X_test, y_test, inner_cv, outer_cv, Classifier, pipeline, parameter_grid):
+        # find best parameter using inner cross-validation
+        best_params = {}
+        best_score = -np.inf
+        # iterate over parameters
+        for parameters in parameter_grid:
+            # accumulate score over inner splits
+            cv_scores = []
+            
+            # iterate over inner cross-validation
+            for inner_train, inner_test in inner_cv.split(X,y):
+                
+                # initialize the inner training and testing data sets
+                X_inner_train = X[inner_train]
+                y_inner_train = y[inner_train]
+                X_inner_test = X[inner_test]
+                y_inner_test = y[inner_test]
+                
+                # build BoxClassifier given parameters and training data
+                clf = Classifier(pipeline, **parameters)
+               
+                # If instance of BoxClassifier fit the PCA data
+                if (isinstance(clf, BoxClassifier)):
+                    
+                    # PCA fit to the inner train data
+                    clf.fit(X_inner_train, y_inner_train)
+                   
+                    # Score the classifier against test data
+                    score = clf.score(X_inner_test, y_inner_test)
+                    cv_scores.append(score)
+                    
+            # compute mean score over inner folds
+            # for a single combination of parameters.
+            mean_score = np.mean(cv_scores)
+            if mean_score > best_score:
+                # if better than so far, remember parameters
+                best_score = mean_score
+                best_params = parameters
+                
+            # Show the current scores and best params
+            print("Current Training Params:")
+            print(parameters)
+            print("mean_score = " + str(mean_score))
+            print("best_score = " + str(best_score))
+            print("best_params:")
+            print(best_params)
+            print("\n")
+        
+        print("Final Classifier Best Params:")
+        print(best_params)
+        
+        # Build classifier on best parameters using outer training set
+        # This is done over all parameters evaluated through a single
+        # outer fold and all inner folds.
+        clf = Classifier(pipeline, **best_params)
+        
+        # If instance of BoxClassifier fit the PCA data
+        # Question do we run PCA on the outer training?
+        if (isinstance(clf, BoxClassifier)):
+        
+            # PCA fit to the outer train data
+            clf.fit(X, y)
+           
+            # Score the test data
+            final_score = clf.score(X_test, y_test)
+            
+        print("final score = " + str(final_score))
+        print("\n")
+        
+        return final_score, best_params, clf
