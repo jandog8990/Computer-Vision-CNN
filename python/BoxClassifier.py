@@ -9,32 +9,35 @@ Initial code taken from:
 
 @author: alejandrogonzales
 """
-
+#from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.decomposition import PCA
-from sklearn.svm import SVC
+#from sklearn.preprocessing import StandardScaler
+#from sklearn.decomposition import PCA
+#from sklearn.svm import SVC
 
 
 class BoxClassifier(BaseEstimator, ClassifierMixin):
-    """An example of classifier"""
+    """
+    BoxClassifier for distinguishing faces from non-faces
     
-    # Initialize the PCA and SVM objects
-    pca = None
-    svm = None
+    TODO: Implement StandardScaler for standardizing the data before PCA
+    """
+    
+    # Initialize the Pipeline (contains PCA and SVM objects)
+    pipeline = None
+    pca__n_components = None
+    SVM__C = None
+    SVM__gamma = None
 
     # Initialize by passing the parameters of your model:
-    def __init__(self, n_components, C, gamma):
+    def __init__(self, pipeline, pca__n_components, SVM__C, SVM__gamma):
         """
         Called when initializing the classifier.
         """
-        self.C_ = C
-        self.gamma_ = gamma
-        self.n_components_ = n_components
-        
-        # whiten=True
-        self.pca = PCA(n_components=n_components, svd_solver='randomized', whiten=True)
-        self.svm = SVC(gamma=gamma, C=C)
-#        SVC(kernel='rbf', class_weight='balanced')
+        self.pipeline = pipeline
+        self.pca__n_components = pca__n_components
+        self.SVM__C = SVM__C
+        self.SVM__gamma = SVM__gamma
 
     # Please add PCA and SVM in this template.
     # Make sure to use the given parameters.
@@ -44,17 +47,15 @@ class BoxClassifier(BaseEstimator, ClassifierMixin):
         
         ... call .fit() for PCA and .fit for SVC()
         """
-        self.svm.fit(X, y)
+        #self.svm.fit(X, y)
+        print("PCA n_components = " + str(self.pca__n_components))
+        print("SVM C = " + str(self.SVM__C))
+        print("SVM gamma = " + str(self.SVM__gamma))
+        print("\n")
+        self.pipeline.set_params(pca__n_components=self.pca__n_components,
+                                 pca__svd_solver='randomized', pca__whiten=True,
+                                 SVM__C=self.SVM__C, SVM__gamma=self.SVM__gamma).fit(X,y)
 
-        return self
-    
-    def pca_fit(self, X):
-        """
-        PCA dimension reduction using SVD on
-        input data X
-        """
-        self.pca.fit(X)
-        
         return self
 
     def predict(self, X):
@@ -64,7 +65,7 @@ class BoxClassifier(BaseEstimator, ClassifierMixin):
         ... apply PCA and .predict() for SVC()
         ... Deterimine Class_result for SVC.
         """
-        y_pred = self.svm.predict(X)
+        y_pred = self.pipeline.predict(X)
         
         return y_pred
 
@@ -76,7 +77,7 @@ class BoxClassifier(BaseEstimator, ClassifierMixin):
         ... Applies predition on X, and compares the results
         ... against the actual values in y.
         """
-        accuracy = self.svm.score(X, y)
+        accuracy = self.pipeline.score(X, y)
         
         return accuracy
     
@@ -85,6 +86,6 @@ class BoxClassifier(BaseEstimator, ClassifierMixin):
         Transform the data using PCA class to reduce
         dimensionality of the incoming data set
         """
-        X_pca = self.pca.transform(X)
+        xtrans = self.pipeline.transform(X)
         
-        return X_pca
+        return xtrans

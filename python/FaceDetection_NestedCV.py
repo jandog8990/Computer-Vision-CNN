@@ -50,32 +50,26 @@ from matplotlib import pyplot as plt
 # Import custom classes for nested cv and BoxClassifier
 from NestedCV import NestedCV
 from BoxClassifier import BoxClassifier
-
 from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import StratifiedKFold, GroupKFold
 
 ## Pipeline: Scale, PCA or SVD, then the estimator (i.e. SVM or RandomTree)
-#('scaler': StandardScaler())
-#('pca', PCA())
 steps = [('scaler', StandardScaler()), ('pca', PCA()), ('SVM', SVC())]
 pipeline = Pipeline(steps)  # can use make_pipeline instead
 
 # K-fold Nested CV
-#     inner_cv = KFold(n_splits=5, shuffle=True, random_state=0)
-#     outer_cv = KFold(n_splits=5, shuffle=True, random_state=0)
+#   inner_cv = KFold(n_splits=5, shuffle=True, random_state=0)
+#   outer_cv = KFold(n_splits=5, shuffle=True, random_state=0)
 
 # Stratified K-fold Nested CV with repeatable tests (i.e. SEED=0)
-#inner_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-#outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+#   inner_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+#   outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
 
 # Group K-Fold CV
 inner_cv = GroupKFold(n_splits=5)
 outer_cv = GroupKFold(n_splits=5)
 
-# GridSearch params: PCA and SVM optimized with gamma and C params
-#    'pca__n_components': [n_components],
-#    'SVM__C': [0.001, 0.1, 10, 100, 10e5],
-#    'SVM__gamma': [0.1, 0.01]
+# PCA and SVM optimized with gamma and C params
 n_components = 150  # image n_components reduction
 params = {
     'n_components': [n_components],
@@ -92,10 +86,6 @@ parameter_grid = ParameterGrid(params)
 nestedCV = NestedCV()
 scores = nestedCV.nested_cv(X, y, groups, inner_cv, outer_cv, BoxClassifier, parameter_grid)
 print("\nCross-validation scores: {}".format(scores))
-
-#print("Test Score = %3.2f" % (grid.score(X_test, y_test)))
-#print("Train Score = %3.2f" % (grid.score(X_train, y_train)))
-#print("Best params = " + str(grid.best_params_))
 
 # Predict output values for input X_test using model from training
 #y_predict = grid.predict(X_test)
