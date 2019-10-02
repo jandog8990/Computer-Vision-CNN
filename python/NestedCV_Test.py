@@ -56,5 +56,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 #grid = GridSearchCV(pipeline, param_grid=params, n_jobs=2, pre_dispatch='2*n_jobs', cv=5) 
 #grid.fit(X_train, y_train)
 
-scores = nested_cv(X_train, y, groups, inner_cv, outer_cv, BoxClassifier, parameter_grid)
+#scores = nested_cv(X_train, y, groups, inner_cv, outer_cv, BoxClassifier, parameter_grid)
+scores = nested_cv(X_train, y, groups, inner_cv, outer_cv, SVC, parameter_grid)
 #print("Cross-validation scores: {}".format(scores))
