@@ -4,7 +4,6 @@
 Created on Mon Sep 30 00:26:20 2019
 
 Load and create data from the GroundTruth anchor pixels
-NOTE: This is worked in tandem with the Jupyter code
 
 @author: alejandrogonzales
 """
@@ -92,46 +91,3 @@ print("\nCross-validation scores: {}".format(scores))
 #plt.scatter(y_test, y_predict)
 #plt.xlabel("True Values")
 #plt.ylabel("Predicted Values")
-
-# ========================================================
-# Second Implementation: Box Classifier with singletons
-# ========================================================
-
-# TEST: single C and gamma
-#C = 0.001
-#gamma = 0.001
-#boxClassifier = BoxClassifier(n_components, C, gamma)
-
-# PCA fit on the training data
-#boxClassifier.pca_fit(X_train)
-
-# PCA reduction on the training data and then fit the classifier
-#X_train_pca = boxClassifier.transform(X_train)
-#boxClassifier.fit(X_train_pca, y_train)
-
-# PCA reduction on the test data and predict
-#X_test_pca = boxClassifier.transform(X_test)
-#y_pred = boxClassifier.predict(X_test_pca)
-
-# Score the classifier with PCA reduced data
-#acc = boxClassifier.score(X_test_pca, y_test)
-
-#print("Y predict shape = " + str(y_pred.shape))
-#print("Score (X_test, y_test) = " + str(acc))
-#print("\n")
-
-# ========================================================
-# First Implementation: GridSearchCV Single Dimension CV
-# ========================================================
-
-# TEST: Split the data into training and test 1 time
-# Divide the dataset into training and testset with random state and stratified K-fold
-# Random state seed gives us reproducable random number (repeats training)
-#X_train, X_test, y_train, y_test = train_test_split(
-#    X, y, test_size=0.3, random_state=30, stratify=y)
-
-# GridSearch for finding the best params for modeling
-#return_train_score=True)
-#grid = GridSearchCV(pipeline, param_grid=params, cv=5) 
-#grid.fit(X_train, y_train)
-

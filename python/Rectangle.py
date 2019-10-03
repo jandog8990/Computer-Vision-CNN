@@ -66,7 +66,7 @@ class Rectangle:
     def area(self):
         w = self.x2 - self.x1
         h = self.y2 - self.y1
-        return w*h
+        return abs(w*h)
     
     # Order coordinates min to max for Y and X resp.
     def order_coords(self):

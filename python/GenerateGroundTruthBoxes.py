@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Oct  2 01:45:02 2019
+
+Generate Ground truth face boxes using RPN procedure
+given in real time object detection paper
+
+@author: alejandrogonzales
+"""
+
 import numpy as np
 import cv2
 import random
@@ -75,6 +86,11 @@ def find_max_face(faceMap):
                     
                     # set new max area and delete the previous max from map
                     maxArea = rdata['intersect_area']
+                    rpn_rect = rdata['rpn_box']
+                    rpnArea = rpn_rect.area()
+                    faceArea = rdata['f_area']
+                    IoU = maxArea/(rpnArea + faceArea)
+                    
                     maxKey = rkey
                 else:
                     # delete the minimum element in rpn map
@@ -171,7 +187,8 @@ print("\n")
 # Configuration for face and bg data
 # Load an avi video to set the anchor points
 numAnchorCols = 10
-numAnchorRows = 5
+#numAnchorRows = 5   # box1 rows
+numAnchorRows = 3   # box2 rows
 
 # Frame configuration for resizing and visualizing
 step = 30
@@ -248,12 +265,6 @@ for key in labelNames.keys():
         print("F3: " + str(f3))
         print("\n")
         
-        print("Face Width Height Scale:")
-        print("Face 1 = " + str(w1) + " : " + str(h1))
-        print("Face 2 = " + str(w2) + " : " + str(h2))
-        print("Face 3 = " + str(w3) + " : " + str(h3))
-        print("\n")
-        
         print("Max Width/Height Proposals = " + str(max_width) + " / " + str(max_height))
         print("\n")
 
@@ -328,7 +339,7 @@ for key in labelNames.keys():
                     
                     # TEST: Draw the first box in the RPN map
                     # TODO Loop through all rpn boxes and calculate overlap btwn GT face
-                    boxname = 'box1'
+                    boxname = 'box2'
                     rpn_box = rpn_map[boxname]
                     
                     # TEST: Draw the RPN test box 
@@ -364,18 +375,12 @@ for key in labelNames.keys():
                         x22 = x+w
                         y22 = y+h
                         frect = Rectangle(x11, y11, x22, y22)
+                        farea = frect.area()
                                                     
                         intersection = rpn_rect&frect
                         if (intersection != None):
                             # Area of intersection
                             intersection_area = intersection.area()
-                            
-                            # Add intersection and box data to the face map
-                            #faceMap[fname][randKey] = {
-                            #        'rpn_box': rpn_rect,
-                            #        'intersect_area': intersection_area,
-                            #        'anchor_pt': (xanchor, yanchor)
-                            #    }
                             
                             # Draw the proposal box over anchors
                             rpn_x1 = rpn_rect.x1
@@ -383,31 +388,18 @@ for key in labelNames.keys():
                             rpn_x2 = rpn_rect.x2
                             rpn_y2 = rpn_rect.y2
                             
-#                            print("-----------------------------------------")
-#                            print("Intersection EXISTS:")
-#                            print("Frame position = " + str(frame_pos))
-#                            print("Anchor key = " + str(randKey))
-#                            print("Face name = " + str(fname))
-#                            print("Box name = " + str(boxname))
-#                            print("Anchor [ " + str(xanchor) + ", " + str(yanchor) + " ]")
-#                            print("-----------------------------------------")
-#                            print("RPN Box location = " + rpn_rect.to_string())
-#                            print("Face location = " + frect.to_string())
-#                            print("Intersection = " + intersection.to_string())
-#                            print("Intersection area = " + str(intersection_area))
-#                            print("-----------------------------------------\n")
-                            
                             # Create the RPN hashmap with box pts and intersection areas
                             rpnMap['rpn_box'] = rpn_rect
                             rpnMap['anchor_pt'] = (xanchor, yanchor)
                             rpnMap['intersect_area'] = intersection_area
+                            rpnMap['f_area'] = farea
                             
                             # Append the RPN hashmap to the Face hashmap
                             faceMap[fname][randKey] = rpnMap  
                     
                             # Draw the anchor pts and RPN box on the current frame
-                            #cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
-                            #cv2.rectangle(rimg, (rpn_rect.x1, rpn_rect.y1), (rpn_rect.x2, rpn_rect.y2), (0,0,255), 2)
+                            cv2.circle(rimg, circleCenter, circleRadius, circleColor, -1)
+                            cv2.rectangle(rimg, (rpn_rect.x1, rpn_rect.y1), (rpn_rect.x2, rpn_rect.y2), (0,0,255), 2)
                         else:
                             # Append the non-intersecting box to the backMap
                             if (randKey != None):
@@ -434,16 +426,12 @@ for key in labelNames.keys():
                 FrameGroup.append(frameCtr)
                 frameCtr = frameCtr + 1
                 
-                # Set the FaceBox and BackBox hashmaps for the current vid/frame
-                #FaceBoxes[vidName][frameNum] = faceMap
-                #BackBoxes[vidName][frameNum] = backMap
-                
                 # Show the current frame with RPN boxes and training boxes
-                #cv2.imshow('Video Frame', rimg)
-                #cv2.waitKey(1)
+                cv2.imshow('Video Frame', rimg)
+                cv2.waitKey(1)
                                 
-                #input("Press Enter to continue...")
-                #print("\n")
+                input("Press Enter to continue...")
+                print("\n")
                                                              
 # Release the video processors for CV
 cap.release()

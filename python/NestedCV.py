@@ -13,7 +13,7 @@ class NestedCV:
         initialize class
         """
         
-    #def nested_cv(self, X, y, groups, inner_cv, outer_cv, Classifier, parameter_grid):
+    # TODO make sure and implement pipeline in this method
     def nested_cv(self, X, y, groups, inner_cv, outer_cv, Classifier, parameter_grid):
         """
         Uses nested cross-validation to optimize and exhaustively evaluate
@@ -58,30 +58,21 @@ class NestedCV:
                     X_inner_test = X[inner_test]
                     y_inner_test = y[inner_test]
                     
-                    # build BoxClassifier given parameters and training data
+                    # Implement BoxClassifier given pipeline, 
+                    # parameters and training data
                     clf = Classifier(**parameters)
-                   
-                    # If instance of BoxClassifier fit the PCA data
-                    if (isinstance(clf, BoxClassifier)):
                         
-                        # PCA fit to the inner train data
-                        clf.pca_fit(X_inner_train)
-                        X_inner_train_pca = clf.transform(X_inner_train)
-                       
-                        # Classifier fit the inner training data
-                        clf.fit(X_inner_train_pca, y_inner_train)
-                       
-                        # Transform the test data w PCA
-                        X_inner_test_pca = clf.transform(X_inner_test)
-                        score = clf.score(X_inner_test_pca, y_inner_test)
-                        cv_scores.append(score)
-                    else:
-                        # Classifier fit the inner training data
-                        clf.fit(X_inner_train, y_inner_train)
-
-                        # Classifier evaluate on inner test set
-                        score = clf.score(X_inner_test, y_inner_test)
-                        cv_scores.append(score)
+                    # PCA fit to the inner train data
+                    clf.pca_fit(X_inner_train)
+                    X_inner_train_pca = clf.transform(X_inner_train)
+                   
+                    # Classifier fit the inner training data
+                    clf.fit(X_inner_train_pca, y_inner_train)
+                   
+                    # Transform the test data w PCA
+                    X_inner_test_pca = clf.transform(X_inner_test)
+                    score = clf.score(X_inner_test_pca, y_inner_test)
+                    cv_scores.append(score)
                         
                 # compute mean score over inner folds
                 # for a single combination of parameters.
@@ -108,28 +99,17 @@ class NestedCV:
             # outer fold and all inner folds.
             clf = Classifier(**best_params)
             
-            # If instance of BoxClassifier fit the PCA data
-            # Question do we run PCA on the outer training?
-            if (isinstance(clf, BoxClassifier)):
-            
-                # PCA fit to the outer train data
-                clf.pca_fit(X_outer_train)
-                X_outer_train_pca = clf.transform(X_outer_train)
-               
-                # Classifier fit the outer training data
-                clf.fit(X_outer_train_pca, y_outer_train)
-               
-                # Transform the test data w PCA
-                X_outer_test_pca = clf.transform(X_outer_test)
-                score = clf.score(X_outer_test_pca, y_outer_test)
-                outer_scores.append(score)
-            else:
-                # Classifier fit the outer training data
-                clf.fit(X_outer_train, y_outer_train)
-    
-                # evaluate the outer scores
-                score = clf.score(X_outer_test, y_outer_test)
-                outer_scores.append()
+            # PCA fit to the outer train data
+            clf.pca_fit(X_outer_train)
+            X_outer_train_pca = clf.transform(X_outer_train)
+           
+            # Classifier fit the outer training data
+            clf.fit(X_outer_train_pca, y_outer_train)
+           
+            # Transform the test data w PCA
+            X_outer_test_pca = clf.transform(X_outer_test)
+            score = clf.score(X_outer_test_pca, y_outer_test)
+            outer_scores.append(score)
                 
             outerCount = outerCount + 1
             print("outer score = " + str(score))
@@ -162,16 +142,13 @@ class NestedCV:
                 
                 # build BoxClassifier given parameters and training data
                 clf = Classifier(pipeline, **parameters)
-               
-                # If instance of BoxClassifier fit the PCA data
-                if (isinstance(clf, BoxClassifier)):
                     
-                    # PCA fit to the inner train data
-                    clf.fit(X_inner_train, y_inner_train)
-                   
-                    # Score the classifier against test data
-                    score = clf.score(X_inner_test, y_inner_test)
-                    cv_scores.append(score)
+                # PCA fit to the inner train data
+                clf.fit(X_inner_train, y_inner_train)
+               
+                # Score the classifier against test data
+                score = clf.score(X_inner_test, y_inner_test)
+                cv_scores.append(score)
                     
             # compute mean score over inner folds
             # for a single combination of parameters.
@@ -198,15 +175,11 @@ class NestedCV:
         # outer fold and all inner folds.
         clf = Classifier(pipeline, **best_params)
         
-        # If instance of BoxClassifier fit the PCA data
-        # Question do we run PCA on the outer training?
-        if (isinstance(clf, BoxClassifier)):
-        
-            # PCA fit to the outer train data
-            clf.fit(X, y)
-           
-            # Score the test data
-            final_score = clf.score(X_test, y_test)
+        # PCA fit to the outer train data
+        clf.fit(X, y)
+       
+        # Score the test data
+        final_score = clf.score(X_test, y_test)
             
         print("final score = " + str(final_score))
         print("\n")
